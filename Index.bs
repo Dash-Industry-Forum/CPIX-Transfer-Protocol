@@ -1,0 +1,266 @@
+<pre class="metadata">
+Date: 2018-04-01
+Revision: 0.1
+
+Title: DASH-IF Implementation Guidelines: Content Protection Information Exchange Format Transfer Protocol (CPIX-TP)
+Status: LD
+Shortname: cpix-tp
+URL: https://dashif.org/guidelines/
+Issue Tracking: GitHub https://github.com/Dash-Industry-Forum/CPIX-Transfer-Protocol/issues
+Repository: https://github.com/Dash-Industry-Forum/CPIX-Transfer-Protocol GitHub
+Editor: DASH-IF IOP, Content Protection and Security task force
+
+Default Highlight: text
+Line Numbers: on
+Markup Shorthands: markdown yes
+Boilerplate: copyright off, abstract off
+Abstract: None
+</pre>
+
+<pre class="biblio">
+{
+	"DASH-CPIX": {
+		"href": "https://dashif.org/guidelines/",
+		"title": "DASH-IF Implementation Guidelines: Content Protection Information Exchange Format (CPIX)",
+		"publisher": "DASH Industry Forum"
+	},
+	"DASH-IF-IOP": {
+		"href": "https://dashif.org/guidelines/",
+		"title": "Guidelines for Implementation: DASH-IF Interoperability Points, version 4.1, September 2017.",
+		"publisher": "DASH Industry Forum"
+	},
+	"DASH-SystemIDs": {
+		"href": "https://dashif.org/identifiers/protection/",
+		"title": "DASH-IF registry of DRM System IDs.",
+		"publisher": "DASH Industry Forum"
+	},
+	"CENC": {
+		"title": "ISO/IEC 23001-7:2016, Third Edition, Information technology - MPEG systems technologies - Part 7: Common encryption in ISO base media file format files.",
+		"publisher": "ISO/IEC"
+	},
+	"RFC6030": {
+		"title": "RFC 6030, Portable Symmetric Key Container (PSKC), October 2010.",
+		"publisher": "IETF"
+	},
+	"CPIX-XML": {
+		"href": "https://dashif.org/guidelines/",
+		"title": "CPIX XML Examples.",
+		"publisher": "DASH Industry Forum"
+	},
+	"CPIX-XSD": {
+		"href": "https://dashif.org/guidelines/",
+		"title": "CPIX XML Schema",
+		"publisher": "DASH Industry Forum"
+	},
+	"XML-DSIG": {
+		"href": "https://www.w3.org/TR/xmldsig-core/",
+		"title": "XML Signature Syntax and Processing (Second edition).",
+		"publisher": "W3C"
+	},
+	"XML-ENC": {
+		"href": "http://www.w3.org/TR/xmlenc-core/",
+		"title": "XML Encryption Syntax and Processing.",
+		"publisher": "W3C"
+	}
+}
+</pre>
+
+<pre boilerplate="conformance">
+<!-- This disables the RFC2119 conformance section, as we use custom DASH-IF specific text for this.  -->
+</pre>
+
+<pre boilerplate="logo">
+<a href="https://dashif.org/"><img src="DASH-IF.png" /></a>
+</pre>
+
+# Scope # {#scope}
+
+The scope of this document is to define a Content Protection Information Exchange Format (CPIX). A CPIX document contains keys and DRM information used for encrypting and protecting content and can be used for exchanging this information among entities needing it in many possibly different workflows for preparing, for example, DASH or HLS content. The CPIX document itself can be encrypted, signed and authenticated so that its receivers can be sure that its confidentiality, source and integrity are also protected.
+
+This specification describes version 2.1 of the CPIX document format. Detailed changes with respect to version 2.0 are tracked [on GitHub](https://github.com/Dash-Industry-Forum/CPIX/issues). Highlighted changes are:
+
+* Updated HLS signalization support and added the support for Smooth Streaming
+* Added new label attributes to usages rules for keys and corrected.
+* Added key hierarchy support (2 layers of keys).
+
+# Disclaimer # {#disclaimer}
+
+This is a document made available by DASH-IF.  The technology embodied in this document may involve the use of intellectual property rights, including patents and patent applications owned or controlled by any of the authors or developers of this document. No patent license, either implied or express, is granted to you by this document. DASH-IF has made no search or investigation for such rights and DASH-IF disclaims any duty to do so. The rights and obligations which apply to DASH-IF documents, as such rights and obligations are set forth and defined in the DASH-IF Bylaws and IPR Policy including, but not limited to, patent and other intellectual property license rights and obligations. A copy of the DASH-IF Bylaws and IPR Policy can be obtained at http://dashif.org/.
+
+The material contained herein is provided on an AS IS basis and to the maximum extent permitted by applicable law, this material is provided AS IS, and the authors and developers of this material and DASH-IF hereby disclaim all other warranties and conditions, either express, implied or statutory, including, but not limited to, any (if any) implied warranties, duties or conditions of merchantability, of fitness for a particular purpose, of accuracy or completeness of responses, of workmanlike effort, and of lack of negligence.
+
+In addition, this document may include references to documents and/or technologies controlled by third parties.  Those third party documents and technologies may be subject to third party rules and licensing terms.  No intellectual property license, either implied or express, to any third party material is granted to you by this document or DASH-IF.  DASH-IF makes no any warranty whatsoever for such third party material.
+
+# Introduction # {#main-intro}
+
+This document defines a container allowing the exchange between entities of content protection information typically made of keys used for encrypting content and any associated DRM specific information. There may be one or several keys and these keys may be protected by one or several DRMs, hence there may be one or several DRM specific information. There is no assumption on the entities exchanging this information but it is not expected that a client device will use this exchange format. The goal is to allow entities involved in the content preparation workflow to get the content protection information so that, for example a DASH MPD can be generated with all content protection information.
+
+Because the defined container is not made for a specifically defined content preparation workflow but is generic, conformance is not considered to be a critical part of CPIX. As a consequence, no conformance is defined for this specification.
+
+## Normative Language ## {#intro-conformance}
+See [[!DASH-IF-IOP]] section 2.3.
+
+## Terms & Definitions ## {#intro-terms}
+
+: <dfn>Content</dfn>
+:: One or more audio-visual elementary streams and the associated MPD if in DASH format.
+
+: <dfn>Content Key</dfn>
+:: A cryptographic key used for encrypting part of the Content.
+
+: <dfn>Content Protection</dfn>
+:: The mechanism ensuring that only authorized devices get access to Content.
+
+: <dfn>DRM Signaling</dfn>
+:: The DRM specific information to be added in Content for proper operation of the DRM system when authorizing a device for this Content. It is made of proprietary information for licensing and key retrieval.
+
+: <dfn>Document Key</dfn>
+:: A cryptographic key used for encrypting the Content Key(s) in the CPIX document.
+
+: <dfn>PSSH</dfn>
+:: Protection System Specific Header box that is part of an ISOBMFF file. This box contains DRM Signaling.
+
+: <dfn>Content Key Context</dfn>
+:: The portion of a media stream which is encrypted with a specific Content Key.
+
+# Use Cases and Requirements # {#usecases}
+
+Content Keys and DRM Signaling, a.k.a. content protection information need to be created and exchanged between some system entities when preparing content. The flows of information are of very different nature depending on where Content Keys are created and also depending on the type of Content that can be either On-Demand or Live.
+
+This section presents different use cases where such exchanges are required. [[#usecases]] describes some workflows for content creation and section to go in the details of how content protection information can be exchanged over an interface between two entities.
+
+# Transfer Protocol # {#transfer-protocol}
+The preferred method of exchanging CPIX documents between entities is through RESTful API.
+
+## Data flow ## {#data-flow}
+A data flow can include, but not limited to any following roles: Encoder, Packager / Encryptor, Manifest Creator, DRM Service.
+Defined data flow assumes that one service or component is requesting missing part of CPIX document from another service or component. Exchange relies on section "Incremental Update and Extension" of the [[!DASH-IF-IOP]] that describes a flexible and future-proof flow for data flow from one system to another.
+Next section provides iteration over different CPIX document elements with examples on how data flow can be organized there.
+
+### DeliveryDataList ### {#fields-deliveryDataList}
+The data flow doesn’t make sense in this context.
+
+### ContentKeyList ### {#fields-contentKeyList}
+If entity relies on external entity to provide content keys, it needs to include empty elements to indicate how many and what kind of keys it expects to receive.
+
+```xml
+<cpix:CPIX id="content1"  xmlns:cpix="urn:dashif:org:cpix">
+    <cpix:ContentKeyList>
+        <cpix:ContentKey kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
+        </cpix:ContentKey>
+        <cpix:ContentKey kid="c2910a53-817f-4d0e-ae5e-120fd25d242b">
+        </cpix:ContentKey>
+    </cpix:ContentKeyList>
+    <cpix:ContentKeyUsageRuleList>
+        <cpix:ContentKeyUsageRule kid="36a9ae27-144a-4d84-8747-a21ec817c1e9" intendedTrackType="sd+hd" />
+        <cpix:ContentKeyUsageRule kid="c2910a53-817f-4d0e-ae5e-120fd25d242b" intendedTrackType="uhd" />
+    </cpix:ContentKeyUsageRuleList>
+</cpix:CPIX>
+```
+Receiving entity, if capable to generate content keys, will fill missing sections, add or update updateVersion field and return it to the sender.
+
+### DRMSystemList ### {#fields-drmSystemList}
+
+If entity relies on an external entity to provide DRM data, it needs to include empty elements of types (like PSSH, ContentProtectionData, HLSSignalingData or SmoothStreamingProtectionHeaderData) that it expects to receive.
+
+```xml
+<cpix:CPIX id="content1" xmlns:cpix="urn:dashif:org:cpix">
+    <!-- ContentKeyList -->
+    <cpix:DRMSystemList>
+        <!-- playready -->
+        <cpix:DRMSystem kid="36a9ae27-144a-4d84-8747-a21ec817c1e9" systemId="9a04f079-9840-4286-ab92-e65be0885f95">
+            <cpix:PSSH></cpix:PSSH>
+            <cpix:HLSSignalingData></cpix:HLSSignalingData>
+        </cpix:DRMSystem>
+    </cpix:DRMSystemList>
+</cpix:CPIX>
+```
+
+Receiving entity, if capable, will fill provided fields with missing DRM data and add or update updateVersion field.
+
+### ContentKeyPeriodList ### {#fields-contentKeyPeriodList}
+
+As section is referenced through ContentKeyUsageRuleList it will be dependon update of ContentKeyUsageRuleList element.
+
+### ContentKeyUsageRuleList ### {#fields-contentKeyUsageRuleList}
+
+```xml
+<cpix:CPIX  xmlns:cpix="urn:dashif:org:cpix">
+    <cpix:ContentKeyList>
+        <cpix:ContentKey kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
+        </cpix:ContentKey>
+    </cpix:ContentKeyList>
+    <cpix:ContentKeyUsageRuleList>
+        <cpix:ContentKeyUsageRule kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
+            <cpix:KeyPeriodFilter></cpix:KeyPeriodFilter>
+            <cpix:VideoFilter></cpix:VideoFilter>
+        </cpix:ContentKeyUsageRule>
+</cpix:CPIX>
+```
+
+Receiving entity, if capable, will fill provided fields and add or update updateVersion field.
+
+### UpdateHistoryItemList ### {#fields-updateHistoryItemList}
+
+The data flow doesn’t make sense in this context.
+
+### Signature ### {#fields-signature}
+
+## Flow ## {#flow}
+The flow uses an incremental update of the CPIX document: one party generates part of the document, and another party fills the gaps by providing missing pieces of a document.
+As an example, for Encoder and DRM service interaction, Encoder will send backbone of a document to DRM Server, and then DRM Server will fill it with content keys and DRM signalling.
+
+## Service API Example ## {#api-examples}
+The CPIX API allows for ingesting, generating, retrieving and remove content keys for a specified contentId (a.k.a. CPIX_ID or Asset). 
+The service API is designed in accordance with the REST principles where interaction is based on resource entities. The parent resource for CPIX will be contentId. It is possible to update or retrieve content keys that protect content using CPIX message format. 
+The copyProtectionData endpoint exposes CPIX API to consumers.
+
+### Headers ### {#headers}
+Supported version of CPIX is signaled in Content-Type and Accept header as:
+
+**Content-Type:** application/cpix+xml;version=2.1 <br/>
+**Accept:** application/cpix+xml;version=2.1
+
+### POST ### {#api-post}
+`POST {serviceUrl}/contents/{contentId}/copyProtectionData `
+
+**Body:** CPIX object <br/>
+Create CPIX object for an encryptor. <br/>
+Encryptor (Packager Interface) will create CPIX request inserting empty elements in places when it expects a response to be provided. <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+### GET ### {#api-get}
+`GET {serviceUrl}/contents/{contentId}/copyProtectionData `
+
+**Body:** None <br/>
+Return CPIX object for the referenced contentId. <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+### GET ### {#api-get-kid}
+`GET {serviceUrl}/contents/{contentId}/copyProtectionData?kid={kid} `
+
+**Body:** None <br/>
+Return CPIX object for the referenced contentId and kid (Content Key Id). <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+### PUT ### {#api-put}
+`PUT {serviceUrl}/contents/{contentId}/copyProtectionData ### {#api-put} `
+
+**Body:** CPIX object <br/>
+Update CPIX object referenced by the contentId <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+### DELETE ### {#api-delete}
+`DELETE {serviceUrl}/contents/{contentId}/copyProtectionData  `
+
+**Body:** None <br/>
+Delete/purge all content keys for given contenId <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+### DELETE ### {#api-delete-kid}
+`DELETE {serviceUrl}/contents/{contentId}/copyProtectionData?kid={kid} `
+
+**Body:** None <br/>
+Delete/purge content key for given contenId and kid (Content Key Id). <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
