@@ -52,7 +52,7 @@ Abstract: None
 
 # Scope # {#scope}
 
-The scope of this document is to define a transfer protocol for [[!DASH-CPIX]]. [[!DASH-CPIX]] defines message protocol but is not providing instruction on how to reach conformity between different entities involved in a message exchange. Transfer protocol describes several use cases and integration patterns.
+The scope of this document is to define a transfer protocol for [[!DASH-CPIX]]. [[!DASH-CPIX]] defines a XML container but is not providing instruction on how to reach conformity between different entities involved in a message exchange. Transfer protocol describes several use cases and integration patterns.
 
 # Disclaimer # {#disclaimer}
 
@@ -64,47 +64,55 @@ In addition, this document may include references to documents and/or technologi
 
 # Introduction # {#main-intro}
 
-This document defines a transfer protocol and set of use cases for [[!DASH-CPIX]]. There are multiple possible applications for CPIX messages, but there is a significant value in the unification of protocol for specific use cases. Unification around CPIX can solve fragmentation issue and problems with proprietary protocols that each vendor has.
+CPIX defined in [[!DASH-CPIX]] is a container for Content Keys and DRM Signaling. It enables entities to exchange this data. [[!DASH-CPIX]] describes several use case where such exchanges are required but it does not define a transfer protocol. This document focuses on some of these use cases and define a transfer protocol. 
 
 ## Normative Language ## {#intro-conformance}
+
 See [[!DASH-IF-IOP]] section 2.3.
 
-## Terms & Definitions ## {#intro-terms}
+## Terms and Definitions ## {#intro-terms}
 
-: <dfn>Content</dfn>
-:: One or more audio-visual elementary streams and the associated MPD if in DASH format.
+See [[!DASH-CPIX]] section 3.2.
 
-: <dfn>Content Key</dfn>
-:: A cryptographic key used for encrypting part of the Content.
+# Packager <-> DRM Server # {#packager-drm-server}
 
-: <dfn>Content Protection</dfn>
-:: The mechanism ensuring that only authorized devices get access to Content.
+## Workflow ## {#packager-drm-server-workflow}
 
-: <dfn>DRM Signaling</dfn>
-:: The DRM specific information to be added in Content for proper operation of the DRM system when authorizing a device for this Content. It is made of proprietary information for licensing and key retrieval.
+This is a basis workflow that is widely deploy. It consists in a Packager creating Content protected by several DRM Systems. As an example, a request from a user triggers an on the fly encryption and protection of an Asset with some DRM Systems.
 
-: <dfn>Document Key</dfn>
-:: A cryptographic key used for encrypting the Content Key(s) in the CPIX document.
+<figure>
+	<img src="packager-drm-server-exchange.png" />
+	<figcaption>Example of Packager <-> DRM Server Content Key(s) and DRM Signalisation exchange flow.</figcaption>
+</figure>
 
-: <dfn>PSSH</dfn>
-:: Protection System Specific Header box that is part of an ISOBMFF file. This box contains DRM Signaling.
+The above figure shows the exchange process between these two components. the responsibilities of each system are described below. This is an example, and some variation are possible, for example, Content Keys may already exist, hence it is not needed to create them every time.
 
-: <dfn>Content Key Context</dfn>
-:: The portion of a media stream which is encrypted with a specific Content Key.
+1. The Packager encrypts the Assets, it needs some Content Key(s) and Content Protection data. 
+2. The Packager creates a CPIX request indicating the number of Content Keys it needs and which DRM Systems are to be used (allowing to generate the right DRM Signaling). In the above example, the Packager requests one Content Key and one DRM System is used.
+3. The Packager sends the CPIX message to the DRM Server. 
+4. The DRM Server processes and updates the CPIX document
+    1. It generates or registers the Content Key(s).
+    2. It generates the requested DRM Signaling (can be for DASH, meaning the ContentProtection or/and PSSH data).
+    3. It updates accordingly the CPIX document.
+5. The DRM Server returns the updated CPIX document to the Packager.
 
-# Transfer Protocol # {#transfer-protocol}
-The preferred method of exchanging CPIX documents between entities is through RESTful API.
+For this exchange to be done, blablabla
 
-## Data flow ## {#data-flow}
-A data flow can include, but not limited to any following roles: Encoder, Packager / Encryptor, Manifest Creator, DRM Service.
-Defined data flow assumes that one service or component is requesting missing part of CPIX document from another service or component. Exchange relies on section "Incremental Update and Extension" of the [[!DASH-IF-IOP]] that describes a flexible and future-proof flow for data flow from one system to another.
-Next section provides iteration over different CPIX document elements with examples on how data flow can be organized there.
+## CPIX Elements ## {#packager-drm-server-cpix-elements}
 
-### DeliveryDataList ### {#fields-deliveryDataList}
-The data flow doesn’t make sense in this context.
+In this context, not all elements of the CPIX document are needed, some optional elements are not used. At the root level of the document, the following lists are not used:
+* <dfn element>DeliveryDataList</dfn>: It is assumed that the exchange is made using a pre-established trust between the Packager and the DRM Server. A classical deplyoment is for a TV operator where all entities are known. 
+* <dfn element>UpdateHistoryItemList</dfn>: The flow does not require tracking the entotoes that made modification to the CPIX document, as it is a simple send/receive exchange.
+* <dfn element>Signature</dfn>: The CPIX document is not signed.
 
-### ContentKeyList ### {#fields-contentKeyList}
-If entity relies on external entity to provide content keys, it needs to include empty elements to indicate how many and what kind of keys it expects to receive.
+For the other lists at the root level of the document, the following described in the next sections apply.
+
+### <dfn element>ContentKeyList</dfn> Element ### {#packager-drm-server-contentKeyList}
+
+A request for Content Keys must include empty elements for indicating the number of request keys and their specificies. If able to generate Content Keys, the receiving system fill the missing parts. Under this list the following elements can be provided empty in a request and the receiving entity is expected to complete the missing information:
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
+
+As an example, this is a request for two content keys identified by their kid, each one is having a defined usage rule.
 
 ```xml
 <cpix:CPIX id="content1"  xmlns:cpix="urn:dashif:org:cpix">
@@ -120,11 +128,13 @@ If entity relies on external entity to provide content keys, it needs to include
     </cpix:ContentKeyUsageRuleList>
 </cpix:CPIX>
 ```
-Receiving entity, if capable to generate content keys, will fill missing sections, add or update updateVersion field and return it to the sender.
 
-### DRMSystemList ### {#fields-drmSystemList}
+### <dfn element>DRMSystemList</dfn> Element ### {#packager-drm-server-drmSystemList}
 
-If entity relies on an external entity to provide DRM data, it needs to include empty elements of types (like PSSH, ContentProtectionData, HLSSignalingData or SmoothStreamingProtectionHeaderData) that it expects to receive.
+A request for DRM Signaling (such as `PSSH`, `HLSSignalingData` ...) must include empty elements for indicating the number of requested DRM Signaling. If able to generate these, the receiving system fill the missing parts. Under this list the following elements can be provided empty in a request and the receiving entity is expected to complete the missing information:
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
+
+As an example, this is a request for both *PSSH* and *HLSSignalingData* for one DRM System (PlayReady).
 
 ```xml
 <cpix:CPIX id="content1" xmlns:cpix="urn:dashif:org:cpix">
@@ -139,13 +149,16 @@ If entity relies on an external entity to provide DRM data, it needs to include 
 </cpix:CPIX>
 ```
 
-Receiving entity, if capable, will fill provided fields with missing DRM data and add or update updateVersion field.
+### <dfn element>ContentKeyPeriodList</dfn> Element ### {#packager-drm-server-contentKeyPeriodList}
 
-### ContentKeyPeriodList ### {#fields-contentKeyPeriodList}
+The presence of this list is driven by the existence of a `ContentKeyUsageRule` element referencing a `ContentKeyPeriod` element that would be part of this list.
 
-As section is referenced through ContentKeyUsageRuleList it will be dependon update of ContentKeyUsageRuleList element.
+### <dfn element>ContentKeyUsageRuleList ### {#packager-drm-server-contentKeyUsageRuleList}
 
-### ContentKeyUsageRuleList ### {#fields-contentKeyUsageRuleList}
+This list can be added in a CPIX document either in a request or in a response. Its presence is driven by different elements, such as predefined rules (could be static), use of key rotation ... Under this list the following elements can be provided empty in a request and the receiving entity is expected to complete the missing information:
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
+
+As an example, this is a request where the receiving entity has to add values under the `KeyPeriodFilter` and `VideoFilter` elements. As a consequence, the answer will contain a `ContentKeyPeriodList` element.
 
 ```xml
 <cpix:CPIX  xmlns:cpix="urn:dashif:org:cpix">
@@ -161,30 +174,26 @@ As section is referenced through ContentKeyUsageRuleList it will be dependon upd
 </cpix:CPIX>
 ```
 
-Receiving entity, if capable, will fill provided fields and add or update updateVersion field.
+## Transfer Protocol ## {#packager-drm-server-transfer-protocol}
 
-### UpdateHistoryItemList ### {#fields-updateHistoryItemList}
+### Flow ### {#packager-drm-server-flow}
 
-The data flow doesn’t make sense in this context.
+The flow uses an incremental update of the CPIX document. One entity generates a partial CPIX document following the rules defined in [[#packager-drm-server-cpix-elements]], and another entity completes it. As an example, a Packager will generate a document with empty Content Key(s) and empty DRM Signaling. The DRM Server adds Content Key(s) and DRM Signaling.
 
-### Signature ### {#fields-signature}
+### Service API ### {#packager-drm-server-api-examples}
 
-## Flow ## {#flow}
-The flow uses an incremental update of the CPIX document: one party generates part of the document, and another party fills the gaps by providing missing pieces of a document.
-As an example, for Encoder and DRM service interaction, Encoder will send backbone of a document to DRM Server, and then DRM Server will fill it with content keys and DRM signalling.
+The preferred method of exchanging CPIX documents between entities is through a RESTful API.
+The API allows ingesting, generating, retrieving and removing Content Key(s) for a `contentId` (attribute of the CPIX element). It is designed in accordance with the REST principles where interaction is based on resource entities. The parent resource for CPIX is the `contentId`.
 
-## Service API Example ## {#api-examples}
-The CPIX API allows for ingesting, generating, retrieving and remove content keys for a specified contentId (a.k.a. CPIX_ID or Asset). 
-The service API is designed in accordance with the REST principles where interaction is based on resource entities. The parent resource for CPIX will be contentId. It is possible to update or retrieve content keys that protect content using CPIX message format. 
-The copyProtectionData endpoint exposes CPIX API to consumers.
+The copyProtectionData endpoint exposes the API to consumers.
 
-### Headers ### {#headers}
+#### Headers #### {#packager-drm-server-api-headers}
 Supported version of CPIX is signaled in Content-Type and Accept header as:
 
 **Content-Type:** application/cpix+xml;version=2.1 <br/>
 **Accept:** application/cpix+xml;version=2.1
 
-### POST ### {#api-post}
+#### POST #### {#packager-drm-server-api-post}
 `POST {serviceUrl}/contents/{contentId}/copyProtectionData `
 
 **Body:** CPIX object <br/>
@@ -192,130 +201,44 @@ Create CPIX object for an encryptor. <br/>
 Encryptor (Packager Interface) will create CPIX request inserting empty elements in places when it expects a response to be provided. <br/>
 **Response:** Filled CPIX object and HTTP 200 OK. <br/>
 
-### GET ### {#api-get}
+#### GET #### {#packager-drm-server-api-get}
 `GET {serviceUrl}/contents/{contentId}/copyProtectionData `
 
 **Body:** None <br/>
 Return CPIX object for the referenced contentId. <br/>
 **Response:** Filled CPIX object and HTTP 200 OK. <br/>
 
-### GET ### {#api-get-kid}
+#### GET #### {#packager-drm-server-api-get-kid}
 `GET {serviceUrl}/contents/{contentId}/copyProtectionData?kid={kid} `
 
 **Body:** None <br/>
 Return CPIX object for the referenced contentId and kid (Content Key Id). <br/>
 **Response:** Filled CPIX object and HTTP 200 OK. <br/>
 
-### PUT ### {#api-put}
+#### PUT #### {#packager-drm-server-api-put}
 `PUT {serviceUrl}/contents/{contentId}/copyProtectionData ### {#api-put} `
 
 **Body:** CPIX object <br/>
 Update CPIX object referenced by the contentId <br/>
 **Response:** Filled CPIX object and HTTP 200 OK. <br/>
 
-### DELETE ### {#api-delete}
+#### DELETE #### {#packager-drm-server-api-delete}
 `DELETE {serviceUrl}/contents/{contentId}/copyProtectionData  `
 
 **Body:** None <br/>
 Delete/purge all content keys for given contenId <br/>
 **Response:** Filled CPIX object and HTTP 200 OK. <br/>
 
-### DELETE ### {#api-delete-kid}
+#### DELETE #### {#packager-drm-server-api-delete-kid}
 `DELETE {serviceUrl}/contents/{contentId}/copyProtectionData?kid={kid} `
 
 **Body:** None <br/>
 Delete/purge content key for given contenId and kid (Content Key Id). <br/>
 **Response:** Filled CPIX object and HTTP 200 OK. <br/>
 
-# Implementation Examples # {#imp-examples}
-## Packager to DRM System integration ## {#packager-drm-system}
-Example use case shows a key exchange between Packager and DRM System:
+### Error codes ### {#packager-drm-server-error-codes}
 
-<figure>
-	<img src="packager-drm-system-exchange.png" />
-	<figcaption>Example of Packager -> DRM System key exchange flow.</figcaption>
-</figure>
-
-Figure shows the exchange process between two components. Responsibilities of each system are described below. Bear in mind that they may vary depending on the capabilities of each system.
-0. The user wants to encrypt an Asset and protect it with DRM system. The user sends the Asset to Packager.
-1. Packager *Encrypts Assets*, it needs Content Key and Content Protection data to encrypt the content. 
-2. Packager *Creates CPIX request* to indicate the number of keys it needs and the protection systems it expects. In [[#imp-examples]] Encoder needs 1 keys and 1 DRM system.
-3. Packager *sends POST* CPIX message to HTTP API of DRM System. 
-4. DRM *Updates CPIX document* with following items:
-    1. generates or registers Content Key
-    2. generates ContentProtection or/and PSSH data
-    3. updates the initial CPIX document with the generated values
-5. DRM System *Returns updates CPIX document* to Packager that includes ContentKey and PSSH for the requested DRM system.
-
-In following example responsibilities are split in following order:
-Packager is capable of:
-* generate and request Content Keys
-* request DRM Signaling
-* provide additional Content Key attributes:
-  * crypto period
-  * track type (uhd, hd, sd, audio, text, data)
-* specify ContentKey usage rules (presumably defined by a Content Owner)
-* update Delivery List
-
-DRM System is capable of:
-* generate Content Keys
-* generate DRM Signaling (DRMSystemList)
-* update Delivery List
-
-# Request/Response Examples # {#inline-examples}
-## Encoder request example: ## {#packager-request-example}
-
-```xml
-POST [BaseURL]/contents/{contentId}/copyProtectionData
-Content-Type: application/cpix+xml;version=2.1
-Accept: application/cpix+xml;version=2.1
-
-
-<cpix:CPIX id="content1"  xmlns:cpix="urn:dashif:org:cpix">
-    <cpix:ContentKeyList>
-        <cpix:ContentKey kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
-        </cpix:ContentKey>
-    </cpix:ContentKeyList>
-    <cpix:DRMSystemList>
-        <!-- playready -->
-        <cpix:DRMSystem kid="36a9ae27-144a-4d84-8747-a21ec817c1e9" systemId="9a04f079-9840-4286-ab92-e65be0885f95">
-            <cpix:PSSH></cpix:PSSH>
-        </cpix:DRMSystem>
-    </cpix:DRMSystemList>
-</cpix:CPIX>
-```
-
-## DRM System response example: ## {#drm-response-example}
-
-```xml
-HTTP/1.1 200 OK
-Content-Type: application/cpix+xml;version=2.1
- 
-
-<cpix:CPIX id="content1"  xmlns:cpix="urn:dashif:org:cpix">
-    <cpix:ContentKeyList>
-        <cpix:ContentKey kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
-            <cpix:Data>
-                <pskc:Secret>
-                    <pskc:PlainValue>Pie+RqjjZ9XF+YFR83A06w==</pskc:PlainValue>
-                </pskc:Secret>
-            </cpix:Data>
-        </cpix:ContentKey>
-    </cpix:ContentKeyList>
-    <cpix:DRMSystemList>
-        <!-- playready -->
-        <cpix:DRMSystem kid="36a9ae27-144a-4d84-8747-a21ec817c1e9" systemId="9a04f079-9840-4286-ab92-e65be0885f95">
-            <cpix:PSSH>===Base64 of PSSH for PlayReady===</cpix:PSSH>
-        </cpix:DRMSystem>
-    </cpix:DRMSystemList>
-</cpix:CPIX>
-```
-
-# Error handling # {#error-handling}
-
-## Error codes ## {#error-codes}
-
-Implementation should follow error schema defined [[!RFC7231]] section 6. Response Status Codes section. It is reasonable to pick limited amount of error that are applicable to context:
+Implementation shall use the Response Status Codes defined below, that is a limited list from the one defined in [[!RFC7231]] section 6.
 
 <table class="def">
 	<tr>
@@ -336,7 +259,7 @@ Implementation should follow error schema defined [[!RFC7231]] section 6. Respon
 	</tr>
 	<tr>
 		<td>403</td>
-		<td>**Forbidden** - The server understood the request, but is refusing to fulfill it. Server MAY describe reason for the refusal if it's not exposing server security.</td>
+		<td>**Forbidden** - The server understood the request, but is refusing to fulfill it. Server may describe reason for the refusal if it's not exposing server security.</td>
 	</tr>
 	<tr>
 		<td>404</td>
@@ -348,7 +271,7 @@ Implementation should follow error schema defined [[!RFC7231]] section 6. Respon
 	</tr>
 	<tr>
 		<td>409</td>
-		<td>**Conflict** - Request cannot be competed due to the conflict in the current state of the resource. The response body SHOULD include enough information for the user to recognize the source of the conflict and resolve it with the new request.</td>
+		<td>**Conflict** - Request cannot be competed due to the conflict in the current state of the resource. The response body should include enough information for the user to recognize the source of the conflict and resolve it with the new request.</td>
 	</tr>
 	<tr>
 		<td>415</td>
@@ -360,7 +283,7 @@ Implementation should follow error schema defined [[!RFC7231]] section 6. Respon
 	</tr>
 	<tr>
 		<td>500</td>
-		<td>**Internal Server Error** - Generic server error message. Client SHOULDN'T seen error with this error code. If it's the case issue should be raised and error should be handled with proper error code.</td>
+		<td>**Internal Server Error** - Generic server error message. Client should not seen error with this error code. If it's the case issue should be raised and error should be handled with proper error code.</td>
 	</tr>
 	<tr>
 		<td>503</td>
@@ -368,28 +291,77 @@ Implementation should follow error schema defined [[!RFC7231]] section 6. Respon
 	</tr>
 </table>
 
-# Examples # {#examples}
+## Implementation Example ## {#inline-examples}
 
-## VOD ## {#examples-vod}
+In the example, the following is assumed. 
+The Packager is capable of:
+* Generating and requesting Content Keys
+* requesting DRM Signaling
+* Providing additional Content Key attributes that are crypto periods and track type (uhd, hd, sd, audio, text, data)
+* Specifying Content Key usage rules (presumably defined by a Content Owner)
 
-### Single key, simplest example ### {#examples-vod-single-key}
+The DRM Server is capable of:
+* Generating Content Keys
+* Generating DRM Signaling
 
-[vod-single-key]
-An Encoder is encrypting a single-track VOD asset where:
-* all tracks (audio, sd, hd) are encrypted with key 36a9ae27-144a-4d84-8747-a21ec817c1e9
-* encoder is not capable of providing additional information about tracks to a key system
+### Encoder Request ### {#packager-request-example}
 
-### Multi-track - multiple keys ### {#examples-vod-multiple-keys}
-[vod-multiple-keys]
-An Encoder is encrypting a multi-track stream where:
-* some tracks (audio, sd) are encrypted with key 36a9ae27-144a-4d84-8747-a21ec817c1e9
-* other tracks (hd, uhd) are encrypted with key c2910a53-817f-4d0e-ae5e-120fd25d242b
+```xml
+POST [BaseURL]/contents/{contentId}/copyProtectionData
+Content-Type: application/cpix+xml;version=2.1
+Accept: application/cpix+xml;version=2.1
 
-## Live ## {#examples-live}
+<cpix:CPIX id="content1"  xmlns:cpix="urn:dashif:org:cpix">
+    <cpix:ContentKeyList>
+        <cpix:ContentKey kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
+        </cpix:ContentKey>
+    </cpix:ContentKeyList>
+    <cpix:DRMSystemList>
+        <!-- playready -->
+        <cpix:DRMSystem kid="36a9ae27-144a-4d84-8747-a21ec817c1e9" systemId="9a04f079-9840-4286-ab92-e65be0885f95">
+            <cpix:PSSH></cpix:PSSH>
+        </cpix:DRMSystem>
+    </cpix:DRMSystemList>
+</cpix:CPIX>
+```
 
-### Multiple-crypto-periods - single key per track ### {#examples-live-periods}
-[live-multi-crypto-periods]
-An Encoder is encrypting a multi-track live stream where:
-* all tracks (audio, sd, hd) within one crypto-period are encrypted with the same key
-* encoder requests three crypto-periods in one request
-* encoder is not providing additional information about tracks to a key system
+### DRM System Response ### {#drm-response-example}
+
+```xml
+HTTP/1.1 200 OK
+Content-Type: application/cpix+xml;version=2.1
+ 
+<cpix:CPIX id="content1"  xmlns:cpix="urn:dashif:org:cpix">
+    <cpix:ContentKeyList>
+        <cpix:ContentKey kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
+            <cpix:Data>
+                <pskc:Secret>
+                    <pskc:PlainValue>Pie+RqjjZ9XF+YFR83A06w==</pskc:PlainValue>
+                </pskc:Secret>
+            </cpix:Data>
+        </cpix:ContentKey>
+    </cpix:ContentKeyList>
+    <cpix:DRMSystemList>
+        <!-- playready -->
+        <cpix:DRMSystem kid="36a9ae27-144a-4d84-8747-a21ec817c1e9" systemId="9a04f079-9840-4286-ab92-e65be0885f95">
+            <cpix:PSSH>===Base64 of PSSH for PlayReady===</cpix:PSSH>
+        </cpix:DRMSystem>
+    </cpix:DRMSystemList>
+</cpix:CPIX>
+```
+
+## Examples Files ## {#examples}
+
+The follwing CPIX document are made available.
+
+### VOD Single Key ### {#examples-vod-single-key}
+
+A Packager is encrypting a VOD asset where all tracks (audio, sd, hd) are encrypted with the key 36a9ae27-144a-4d84-8747-a21ec817c1e9. The Packager is not able to provide additional information about tracks to a DRM Server.
+
+### VOD Multi Track With Multiple Keys ### {#examples-vod-multiple-keys}
+
+A Packager is encrypting a VOD asset where some tracks (audio, sd) are encrypted with the key 36a9ae27-144a-4d84-8747-a21ec817c1e9 while all others tracks (hd, uhd) are encrypted with the key c2910a53-817f-4d0e-ae5e-120fd25d242b.
+
+### Live Multiple Crypto-periods With a Single Key Per Track ### {#examples-live-periods}
+
+A Packager is encrypting a Live stream where all tracks are encrypted with the same key on a given crypto-period. The packager requests three crypto-periods in one request and is not providing additional information about tracks to a DRM Server.
