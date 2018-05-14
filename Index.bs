@@ -1,0 +1,395 @@
+<pre class="metadata">
+Date: 2018-04-01
+Revision: 0.1
+
+Title: DASH-IF Implementation Guidelines: Content Protection Information Exchange Format Transfer Protocol (CPIX-TP)
+Status: LD
+Shortname: cpix-tp
+URL: https://dashif.org/guidelines/
+Issue Tracking: GitHub https://github.com/Dash-Industry-Forum/CPIX-Transfer-Protocol/issues
+Repository: https://github.com/Dash-Industry-Forum/CPIX-Transfer-Protocol GitHub
+Editor: DASH-IF IOP, Content Protection and Security task force
+
+Default Highlight: text
+Line Numbers: on
+Markup Shorthands: markdown yes
+Boilerplate: copyright off, abstract off
+Abstract: None
+</pre>
+
+<pre class="biblio">
+{
+	"DASH-CPIX": {
+		"href": "https://dashif.org/guidelines/",
+		"title": "DASH-IF Implementation Guidelines: Content Protection Information Exchange Format (CPIX)",
+		"publisher": "DASH Industry Forum"
+	},
+	"DASH-IF-IOP": {
+		"href": "https://dashif.org/guidelines/",
+		"title": "Guidelines for Implementation: DASH-IF Interoperability Points, version 4.1, September 2017.",
+		"publisher": "DASH Industry Forum"
+	},
+	"DASH-SystemIDs": {
+		"href": "https://dashif.org/identifiers/protection/",
+		"title": "DASH-IF registry of DRM System IDs.",
+		"publisher": "DASH Industry Forum"
+	},
+	"RFC7231": {
+		"href": "https://tools.ietf.org/html/rfc7231#section-6",
+		"title": "Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content",
+		"publisher": "Internet Engineering Task Force (IETF)"
+	}
+}
+</pre>
+
+<pre boilerplate="conformance">
+<!-- This disables the RFC2119 conformance section, as we use custom DASH-IF specific text for this.  -->
+</pre>
+
+<pre boilerplate="logo">
+<a href="https://dashif.org/"><img src="DASH-IF.png" /></a>
+</pre>
+
+# Scope # {#scope}
+
+The scope of this document is to define a transfer protocol for [[!DASH-CPIX]]. [[!DASH-CPIX]] defines message protocol but is not providing instruction on how to reach conformity between different entities involved in a message exchange. Transfer protocol describes several use cases and integration patterns.
+
+# Disclaimer # {#disclaimer}
+
+This is a document made available by DASH-IF.  The technology embodied in this document may involve the use of intellectual property rights, including patents and patent applications owned or controlled by any of the authors or developers of this document. No patent license, either implied or express, is granted to you by this document. DASH-IF has made no search or investigation for such rights and DASH-IF disclaims any duty to do so. The rights and obligations which apply to DASH-IF documents, as such rights and obligations are set forth and defined in the DASH-IF Bylaws and IPR Policy including, but not limited to, patent and other intellectual property license rights and obligations. A copy of the DASH-IF Bylaws and IPR Policy can be obtained at http://dashif.org/.
+
+The material contained herein is provided on an AS IS basis and to the maximum extent permitted by applicable law, this material is provided AS IS, and the authors and developers of this material and DASH-IF hereby disclaim all other warranties and conditions, either express, implied or statutory, including, but not limited to, any (if any) implied warranties, duties or conditions of merchantability, of fitness for a particular purpose, of accuracy or completeness of responses, of workmanlike effort, and of lack of negligence.
+
+In addition, this document may include references to documents and/or technologies controlled by third parties.  Those third party documents and technologies may be subject to third party rules and licensing terms.  No intellectual property license, either implied or express, to any third party material is granted to you by this document or DASH-IF.  DASH-IF makes no any warranty whatsoever for such third party material.
+
+# Introduction # {#main-intro}
+
+This document defines a transfer protocol and set of use cases for [[!DASH-CPIX]]. There are multiple possible applications for CPIX messages, but there is a significant value in the unification of protocol for specific use cases. Unification around CPIX can solve fragmentation issue and problems with proprietary protocols that each vendor has.
+
+## Normative Language ## {#intro-conformance}
+See [[!DASH-IF-IOP]] section 2.3.
+
+## Terms & Definitions ## {#intro-terms}
+
+: <dfn>Content</dfn>
+:: One or more audio-visual elementary streams and the associated MPD if in DASH format.
+
+: <dfn>Content Key</dfn>
+:: A cryptographic key used for encrypting part of the Content.
+
+: <dfn>Content Protection</dfn>
+:: The mechanism ensuring that only authorized devices get access to Content.
+
+: <dfn>DRM Signaling</dfn>
+:: The DRM specific information to be added in Content for proper operation of the DRM system when authorizing a device for this Content. It is made of proprietary information for licensing and key retrieval.
+
+: <dfn>Document Key</dfn>
+:: A cryptographic key used for encrypting the Content Key(s) in the CPIX document.
+
+: <dfn>PSSH</dfn>
+:: Protection System Specific Header box that is part of an ISOBMFF file. This box contains DRM Signaling.
+
+: <dfn>Content Key Context</dfn>
+:: The portion of a media stream which is encrypted with a specific Content Key.
+
+# Transfer Protocol # {#transfer-protocol}
+The preferred method of exchanging CPIX documents between entities is through RESTful API.
+
+## Data flow ## {#data-flow}
+A data flow can include, but not limited to any following roles: Encoder, Packager / Encryptor, Manifest Creator, DRM Service.
+Defined data flow assumes that one service or component is requesting missing part of CPIX document from another service or component. Exchange relies on section "Incremental Update and Extension" of the [[!DASH-IF-IOP]] that describes a flexible and future-proof flow for data flow from one system to another.
+Next section provides iteration over different CPIX document elements with examples on how data flow can be organized there.
+
+### DeliveryDataList ### {#fields-deliveryDataList}
+The data flow doesn’t make sense in this context.
+
+### ContentKeyList ### {#fields-contentKeyList}
+If entity relies on external entity to provide content keys, it needs to include empty elements to indicate how many and what kind of keys it expects to receive.
+
+```xml
+<cpix:CPIX id="content1"  xmlns:cpix="urn:dashif:org:cpix">
+    <cpix:ContentKeyList>
+        <cpix:ContentKey kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
+        </cpix:ContentKey>
+        <cpix:ContentKey kid="c2910a53-817f-4d0e-ae5e-120fd25d242b">
+        </cpix:ContentKey>
+    </cpix:ContentKeyList>
+    <cpix:ContentKeyUsageRuleList>
+        <cpix:ContentKeyUsageRule kid="36a9ae27-144a-4d84-8747-a21ec817c1e9" intendedTrackType="sd+hd" />
+        <cpix:ContentKeyUsageRule kid="c2910a53-817f-4d0e-ae5e-120fd25d242b" intendedTrackType="uhd" />
+    </cpix:ContentKeyUsageRuleList>
+</cpix:CPIX>
+```
+Receiving entity, if capable to generate content keys, will fill missing sections, add or update updateVersion field and return it to the sender.
+
+### DRMSystemList ### {#fields-drmSystemList}
+
+If entity relies on an external entity to provide DRM data, it needs to include empty elements of types (like PSSH, ContentProtectionData, HLSSignalingData or SmoothStreamingProtectionHeaderData) that it expects to receive.
+
+```xml
+<cpix:CPIX id="content1" xmlns:cpix="urn:dashif:org:cpix">
+    <!-- ContentKeyList -->
+    <cpix:DRMSystemList>
+        <!-- playready -->
+        <cpix:DRMSystem kid="36a9ae27-144a-4d84-8747-a21ec817c1e9" systemId="9a04f079-9840-4286-ab92-e65be0885f95">
+            <cpix:PSSH></cpix:PSSH>
+            <cpix:HLSSignalingData></cpix:HLSSignalingData>
+        </cpix:DRMSystem>
+    </cpix:DRMSystemList>
+</cpix:CPIX>
+```
+
+Receiving entity, if capable, will fill provided fields with missing DRM data and add or update updateVersion field.
+
+### ContentKeyPeriodList ### {#fields-contentKeyPeriodList}
+
+As section is referenced through ContentKeyUsageRuleList it will be dependon update of ContentKeyUsageRuleList element.
+
+### ContentKeyUsageRuleList ### {#fields-contentKeyUsageRuleList}
+
+```xml
+<cpix:CPIX  xmlns:cpix="urn:dashif:org:cpix">
+    <cpix:ContentKeyList>
+        <cpix:ContentKey kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
+        </cpix:ContentKey>
+    </cpix:ContentKeyList>
+    <cpix:ContentKeyUsageRuleList>
+        <cpix:ContentKeyUsageRule kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
+            <cpix:KeyPeriodFilter></cpix:KeyPeriodFilter>
+            <cpix:VideoFilter></cpix:VideoFilter>
+        </cpix:ContentKeyUsageRule>
+</cpix:CPIX>
+```
+
+Receiving entity, if capable, will fill provided fields and add or update updateVersion field.
+
+### UpdateHistoryItemList ### {#fields-updateHistoryItemList}
+
+The data flow doesn’t make sense in this context.
+
+### Signature ### {#fields-signature}
+
+## Flow ## {#flow}
+The flow uses an incremental update of the CPIX document: one party generates part of the document, and another party fills the gaps by providing missing pieces of a document.
+As an example, for Encoder and DRM service interaction, Encoder will send backbone of a document to DRM Server, and then DRM Server will fill it with content keys and DRM signalling.
+
+## Service API Example ## {#api-examples}
+The CPIX API allows for ingesting, generating, retrieving and remove content keys for a specified contentId (a.k.a. CPIX_ID or Asset). 
+The service API is designed in accordance with the REST principles where interaction is based on resource entities. The parent resource for CPIX will be contentId. It is possible to update or retrieve content keys that protect content using CPIX message format. 
+The copyProtectionData endpoint exposes CPIX API to consumers.
+
+### Headers ### {#headers}
+Supported version of CPIX is signaled in Content-Type and Accept header as:
+
+**Content-Type:** application/cpix+xml;version=2.1 <br/>
+**Accept:** application/cpix+xml;version=2.1
+
+### POST ### {#api-post}
+`POST {serviceUrl}/contents/{contentId}/copyProtectionData `
+
+**Body:** CPIX object <br/>
+Create CPIX object for an encryptor. <br/>
+Encryptor (Packager Interface) will create CPIX request inserting empty elements in places when it expects a response to be provided. <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+### GET ### {#api-get}
+`GET {serviceUrl}/contents/{contentId}/copyProtectionData `
+
+**Body:** None <br/>
+Return CPIX object for the referenced contentId. <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+### GET ### {#api-get-kid}
+`GET {serviceUrl}/contents/{contentId}/copyProtectionData?kid={kid} `
+
+**Body:** None <br/>
+Return CPIX object for the referenced contentId and kid (Content Key Id). <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+### PUT ### {#api-put}
+`PUT {serviceUrl}/contents/{contentId}/copyProtectionData ### {#api-put} `
+
+**Body:** CPIX object <br/>
+Update CPIX object referenced by the contentId <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+### DELETE ### {#api-delete}
+`DELETE {serviceUrl}/contents/{contentId}/copyProtectionData  `
+
+**Body:** None <br/>
+Delete/purge all content keys for given contenId <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+### DELETE ### {#api-delete-kid}
+`DELETE {serviceUrl}/contents/{contentId}/copyProtectionData?kid={kid} `
+
+**Body:** None <br/>
+Delete/purge content key for given contenId and kid (Content Key Id). <br/>
+**Response:** Filled CPIX object and HTTP 200 OK. <br/>
+
+# Implementation Examples # {#imp-examples}
+## Packager to DRM System integration ## {#packager-drm-system}
+Example use case shows a key exchange between Packager and DRM System:
+
+<figure>
+	<img src="packager-drm-system-exchange.png" />
+	<figcaption>Example of Packager -> DRM System key exchange flow.</figcaption>
+</figure>
+
+Figure shows the exchange process between two components. Responsibilities of each system are described below. Bear in mind that they may vary depending on the capabilities of each system.
+0. The user wants to encrypt an Asset and protect it with DRM system. The user sends the Asset to Packager.
+1. Packager *Encrypts Assets*, it needs Content Key and Content Protection data to encrypt the content. 
+2. Packager *Creates CPIX request* to indicate the number of keys it needs and the protection systems it expects. In [[#imp-examples]] Encoder needs 1 keys and 1 DRM system.
+3. Packager *sends POST* CPIX message to HTTP API of DRM System. 
+4. DRM *Updates CPIX document* with following items:
+    1. generates or registers Content Key
+    2. generates ContentProtection or/and PSSH data
+    3. updates the initial CPIX document with the generated values
+5. DRM System *Returns updates CPIX document* to Packager that includes ContentKey and PSSH for the requested DRM system.
+
+In following example responsibilities are split in following order:
+Packager is capable of:
+* generate and request Content Keys
+* request DRM Signaling
+* provide additional Content Key attributes:
+  * crypto period
+  * track type (uhd, hd, sd, audio, text, data)
+* specify ContentKey usage rules (presumably defined by a Content Owner)
+* update Delivery List
+
+DRM System is capable of:
+* generate Content Keys
+* generate DRM Signaling (DRMSystemList)
+* update Delivery List
+
+# Request/Response Examples # {#inline-examples}
+## Encoder request example: ## {#packager-request-example}
+
+```xml
+POST [BaseURL]/contents/{contentId}/copyProtectionData
+Content-Type: application/cpix+xml;version=2.1
+Accept: application/cpix+xml;version=2.1
+
+
+<cpix:CPIX id="content1"  xmlns:cpix="urn:dashif:org:cpix">
+    <cpix:ContentKeyList>
+        <cpix:ContentKey kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
+        </cpix:ContentKey>
+    </cpix:ContentKeyList>
+    <cpix:DRMSystemList>
+        <!-- playready -->
+        <cpix:DRMSystem kid="36a9ae27-144a-4d84-8747-a21ec817c1e9" systemId="9a04f079-9840-4286-ab92-e65be0885f95">
+            <cpix:PSSH></cpix:PSSH>
+        </cpix:DRMSystem>
+    </cpix:DRMSystemList>
+</cpix:CPIX>
+```
+
+## DRM System response example: ## {#drm-response-example}
+
+```xml
+HTTP/1.1 200 OK
+Content-Type: application/cpix+xml;version=2.1
+ 
+
+<cpix:CPIX id="content1"  xmlns:cpix="urn:dashif:org:cpix">
+    <cpix:ContentKeyList>
+        <cpix:ContentKey kid="36a9ae27-144a-4d84-8747-a21ec817c1e9">
+            <cpix:Data>
+                <pskc:Secret>
+                    <pskc:PlainValue>Pie+RqjjZ9XF+YFR83A06w==</pskc:PlainValue>
+                </pskc:Secret>
+            </cpix:Data>
+        </cpix:ContentKey>
+    </cpix:ContentKeyList>
+    <cpix:DRMSystemList>
+        <!-- playready -->
+        <cpix:DRMSystem kid="36a9ae27-144a-4d84-8747-a21ec817c1e9" systemId="9a04f079-9840-4286-ab92-e65be0885f95">
+            <cpix:PSSH>===Base64 of PSSH for PlayReady===</cpix:PSSH>
+        </cpix:DRMSystem>
+    </cpix:DRMSystemList>
+</cpix:CPIX>
+```
+
+# Error handling # {#error-handling}
+
+## Error codes ## {#error-codes}
+
+Implementation should follow error schema defined [[!RFC7231]] section 6. Response Status Codes section. It is reasonable to pick limited amount of error that are applicable to context:
+
+<table class="def">
+	<tr>
+		<th>Code</th>
+		<th>Description</th>
+	</tr>
+	<tr>
+		<td>200</td>
+		<td>**OK** - The request has succeeded. Client can read result in the body and headers of the response.</td>
+	</tr>
+	<tr>
+		<td>400</td>
+		<td>**Bad Request** - The request could not be understood by the server due to malformed syntax or invalid data in the body. Body should contain additional details.</td>
+	</tr>
+	<tr>
+		<td>401</td>
+		<td>**Unauthorized** - The request requires user authentication or provided credentials are not valid.</td>
+	</tr>
+	<tr>
+		<td>403</td>
+		<td>**Forbidden** - The server understood the request, but is refusing to fulfill it. Server MAY describe reason for the refusal if it's not exposing server security.</td>
+	</tr>
+	<tr>
+		<td>404</td>
+		<td>**Not Found** - The requested resource identified by the URL could not be found. Can be temporary or permanent.</td>
+	</tr>
+	<tr>
+		<td>405</td>
+		<td>**Method Not Allowed** - Method specified in the Request in not allowed for the current resource.</td>
+	</tr>
+	<tr>
+		<td>409</td>
+		<td>**Conflict** - Request cannot be competed due to the conflict in the current state of the resource. The response body SHOULD include enough information for the user to recognize the source of the conflict and resolve it with the new request.</td>
+	</tr>
+	<tr>
+		<td>415</td>
+		<td>**Unsupported Media Type** - The body request is not compliant with the media type supported by the REST endpoint.</td>
+	</tr>
+	<tr>
+		<td>429</td>
+		<td>**Too Many Requests** - The user has sent too many requests in a given amount of time. Rate limiting has been applied.</td>
+	</tr>
+	<tr>
+		<td>500</td>
+		<td>**Internal Server Error** - Generic server error message. Client SHOULDN'T seen error with this error code. If it's the case issue should be raised and error should be handled with proper error code.</td>
+	</tr>
+	<tr>
+		<td>503</td>
+		<td>**Service Unavailable** - The server is currently unavailable and cannot handle request. Temporary condition. Query can be repeated again.</td>
+	</tr>
+</table>
+
+# Examples # {#examples}
+
+## VOD ## {#examples-vod}
+
+### Single key, simplest example ### {#examples-vod-single-key}
+
+[vod-single-key]
+An Encoder is encrypting a single-track VOD asset where:
+* all tracks (audio, sd, hd) are encrypted with key 36a9ae27-144a-4d84-8747-a21ec817c1e9
+* encoder is not capable of providing additional information about tracks to a key system
+
+### Multi-track - multiple keys ### {#examples-vod-multiple-keys}
+[vod-multiple-keys]
+An Encoder is encrypting a multi-track stream where:
+* some tracks (audio, sd) are encrypted with key 36a9ae27-144a-4d84-8747-a21ec817c1e9
+* other tracks (hd, uhd) are encrypted with key c2910a53-817f-4d0e-ae5e-120fd25d242b
+
+## Live ## {#examples-live}
+
+### Multiple-crypto-periods - single key per track ### {#examples-live-periods}
+[live-multi-crypto-periods]
+An Encoder is encrypting a multi-track live stream where:
+* all tracks (audio, sd, hd) within one crypto-period are encrypted with the same key
+* encoder requests three crypto-periods in one request
+* encoder is not providing additional information about tracks to a key system
