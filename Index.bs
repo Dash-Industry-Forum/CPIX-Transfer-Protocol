@@ -81,7 +81,7 @@ See [[!DASH-CPIX]] section 3.2.
 This is a basis workflow that is widely deploy. It consists in a Packager creating Content protected by several DRM Systems. As an example, a request from a user triggers an on the fly encryption and protection of an Asset with some DRM Systems.
 
 <figure>
-	<img src="packager-drm-server-exchange.png" />
+	<img src="packager-drm-system-exchange.png" />
 	<figcaption>Example of Packager <-> DRM Server Content Key(s) and DRM Signalisation exchange flow.</figcaption>
 </figure>
 
